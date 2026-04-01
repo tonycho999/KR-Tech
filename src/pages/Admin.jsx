@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import usePortfolio from '../hooks/usePortfolio';
 import Button from '../components/common/Button';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const Admin = () => {
   const { projects, loading, createNewProject, removeProject } = usePortfolio();
   
-  // 로그인 상태 관리
+  // 로그인 상태 관리 (Firebase 대신 자체 상태 사용)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -17,34 +16,27 @@ const Admin = () => {
   const [projectUrl, setProjectUrl] = useState('');
   const [file, setFile] = useState(null);
 
-  // Firebase Auth 상태 감지 (새로고침해도 로그인 유지)
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // 로그인 함수
-  const handleLogin = async (e) => {
+  // 이전에 요청하신 자체 로그인 함수 (a@a.com / 202604 또는 2580)
+  const handleLogin = (e) => {
     e.preventDefault();
-    const auth = getAuth();
-    try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-    } catch (error) {
-      alert("Login failed: Check your email and password.");
+    const isMasterAccount = loginEmail === 'a@a.com' && loginPassword === '202604';
+    const isPinLogin = loginPassword === '2580';
+
+    if (isMasterAccount || isPinLogin) {
+      setIsAuthenticated(true);
+    } else {
+      alert("Invalid credentials. Please try again.");
       setLoginPassword('');
     }
   };
 
-  // 로그아웃 함수
-  const handleLogout = async () => {
-    const auth = getAuth();
-    await signOut(auth);
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setLoginEmail('');
+    setLoginPassword('');
   };
 
-  // 업로드 함수 (700KB 제한 포함)
+  // 업로드 함수 (700KB 제한 포함 + Cloudflare API 호출)
   const handleUpload = async (e) => {
     e.preventDefault();
     
@@ -53,13 +45,13 @@ const Admin = () => {
       return;
     }
 
-    // 🚨 700KB 용량 제한 체크 (700 * 1024 bytes = 716,800 bytes)
+    // 🚨 700KB 용량 제한 체크
     if (file.size > 700 * 1024) {
       alert("Image size exceeds 700KB. Please optimize the image and try again.");
-      return; // 조건에 맞지 않으면 업로드 중단
+      return; 
     }
     
-    // 파일과 텍스트 데이터를 함께 전송
+    // 파일과 텍스트 데이터를 백엔드로 전송
     const success = await createNewProject({ title, description, projectUrl }, file);
     
     if (success) {
@@ -68,20 +60,19 @@ const Admin = () => {
       setDescription('');
       setProjectUrl('');
       setFile(null);
-      document.getElementById('file-upload-input').value = ''; // 파일 입력창 초기화
+      document.getElementById('file-upload-input').value = ''; 
     } else {
-      alert("Upload failed. You might not have permission.");
+      alert("Upload failed. Please try again.");
     }
   };
 
-  // 삭제 함수
   const handleDelete = async (id, imageUrl) => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       await removeProject(id, imageUrl);
     }
   };
 
-  // 1. 비로그인 상태일 때 보여줄 화면 (로그인 폼)
+  // 1. 비로그인 상태일 때 화면
   if (!isAuthenticated) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -89,21 +80,21 @@ const Admin = () => {
           <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional for PIN)</label>
               <input 
-                type="email" required
+                type="email" 
                 value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
                 className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
                 placeholder="admin@example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password / PIN</label>
               <input 
                 type="password" required
                 value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
                 className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your password"
+                placeholder="Enter your password or 2580"
               />
             </div>
             <Button type="submit" variant="primary" className="w-full mt-6">
@@ -115,7 +106,7 @@ const Admin = () => {
     );
   }
 
-  // 2. 로그인 성공 시 보여줄 관리자 대시보드 화면
+  // 2. 로그인 성공 시 화면
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
       <div className="flex justify-between items-center mb-8">
@@ -123,7 +114,6 @@ const Admin = () => {
         <Button variant="outline" onClick={handleLogout}>Logout</Button>
       </div>
       
-      {/* 업로드 폼 영역 */}
       <div className="bg-gray-50 p-6 rounded-lg mb-12 border border-gray-200">
         <h3 className="text-lg font-bold mb-4">Add New Portfolio</h3>
         <form onSubmit={handleUpload} className="space-y-4">
@@ -160,7 +150,6 @@ const Admin = () => {
         </form>
       </div>
 
-      {/* 등록된 프로젝트 목록 영역 */}
       <div>
         <h3 className="text-lg font-bold mb-4">Registered Projects</h3>
         {projects.length === 0 ? (
