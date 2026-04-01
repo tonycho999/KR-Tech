@@ -4,29 +4,62 @@ import PortfolioGrid from '../components/portfolio/PortfolioGrid';
 import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
 
+// 영어로 변경된 카테고리 목록
+const categories = ['All', 'Web & App', 'Solution', 'Game', 'Design', 'Others'];
+
 const Portfolio = () => {
   const { projects, loading, error } = usePortfolio();
   
-  // 선택된 포트폴리오의 상태를 관리 (null이면 모달 닫힘, 객체가 있으면 모달 열림)
   const [selectedProject, setSelectedProject] = useState(null);
+  const [activeTab, setActiveTab] = useState('All'); // 현재 선택된 탭 상태
 
   const closeModal = () => {
     setSelectedProject(null);
   };
 
+  // 선택된 탭에 맞춰 프로젝트를 걸러내는(Filter) 함수
+  const filteredProjects = activeTab === 'All' 
+    ? projects 
+    : projects.filter(project => project.category === activeTab);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-16">
-      <h2 className="text-3xl font-bold text-center mb-4">Our Work</h2>
-      <p className="text-center text-gray-600 mb-12">
-        Explore the projects successfully delivered by KR-Tech.
-      </p>
+    <div className="max-w-7xl mx-auto px-4 py-16 sm:py-24">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Our Work</h2>
+        <p className="text-lg text-gray-600">
+          Explore the successful projects delivered by KR-Tech.
+        </p>
+      </div>
       
+      {/* Category Filter Tabs */}
+      <div className="flex flex-wrap justify-center gap-2 mb-12">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveTab(cat)}
+            className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+              activeTab === cat
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {loading && <div className="text-center py-12 text-gray-500">Loading data...</div>}
       {error && <div className="text-center py-12 text-red-500">An error occurred: {error}</div>}
       
-      {/* 카드를 클릭하면 setSelectedProject에 해당 프로젝트 데이터를 담습니다 */}
-      {!loading && !error && (
-        <PortfolioGrid items={projects} onProjectClick={setSelectedProject} />
+      {/* 데이터가 없을 때의 빈 화면 처리 */}
+      {!loading && !error && filteredProjects.length === 0 ? (
+        <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
+          <p className="text-gray-500">No projects found in this category.</p>
+        </div>
+      ) : (
+        !loading && !error && (
+          <PortfolioGrid items={filteredProjects} onProjectClick={setSelectedProject} />
+        )
       )}
 
       {/* 모달 영역 */}
@@ -46,7 +79,6 @@ const Portfolio = () => {
               {selectedProject.description}
             </p>
             
-            {/* 프로젝트 URL이 존재할 때만 Visit Website 버튼을 렌더링합니다 */}
             {selectedProject.projectUrl && (
               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
                 <a 
@@ -64,6 +96,7 @@ const Portfolio = () => {
           </div>
         )}
       </Modal>
+
     </div>
   );
 };
