@@ -5,10 +5,33 @@ import Button from '../components/common/Button';
 const Admin = () => {
   const { projects, loading, createNewProject, removeProject } = usePortfolio();
   
+  // 1. 로그인 상태와 입력값 관리 State 추가
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // 포트폴리오 폼 State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [projectUrl, setProjectUrl] = useState(''); // URL 상태 추가
+  const [projectUrl, setProjectUrl] = useState('');
   const [file, setFile] = useState(null);
+
+  // 2. 로그인 버튼 클릭 시 실행되는 함수
+  const handleLogin = (e) => {
+    e.preventDefault();
+    
+    // WARNING: 프론트엔드 하드코딩은 실제 서비스에서는 절대 권장하지 않습니다!
+    // 요청하신 계정(a@a.com / 202604) 또는 비밀번호(2580) 확인
+    const isMasterAccount = loginEmail === 'a@a.com' && loginPassword === '202604';
+    const isPinLogin = loginPassword === '2580';
+
+    if (isMasterAccount || isPinLogin) {
+      setIsAuthenticated(true);
+    } else {
+      alert("Invalid credentials. Please try again.");
+      setLoginPassword(''); // 틀렸을 때 비밀번호 칸만 비워주기
+    }
+  };
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -17,14 +40,13 @@ const Admin = () => {
       return;
     }
 
-    // projectUrl을 함께 넘겨줍니다
     const success = await createNewProject({ title, description, projectUrl }, file);
     
     if (success) {
       alert("Successfully uploaded!");
       setTitle('');
       setDescription('');
-      setProjectUrl(''); // URL 초기화
+      setProjectUrl('');
       setFile(null);
     }
   };
@@ -35,9 +57,51 @@ const Admin = () => {
     }
   };
 
+  // 3. 로그인이 안 되어있다면 '로그인 폼' 화면만 보여줍니다.
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional for PIN login)</label>
+              <input 
+                type="email" 
+                value={loginEmail} 
+                onChange={e => setLoginEmail(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password / PIN</label>
+              <input 
+                type="password" 
+                required
+                value={loginPassword} 
+                onChange={e => setLoginPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your password"
+              />
+            </div>
+            <Button type="submit" variant="primary" className="w-full mt-6">
+              Login
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. 로그인이 성공하면 아래의 원래 관리자 화면을 보여줍니다.
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
-      <h2 className="text-2xl font-bold mb-8 text-red-600">Admin Only: Portfolio Management</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl font-bold text-red-600">Admin Only: Portfolio Management</h2>
+        {/* 로그아웃 버튼 (새로고침 효과) */}
+        <Button variant="outline" onClick={() => setIsAuthenticated(false)}>Logout</Button>
+      </div>
       
       <div className="bg-gray-50 p-6 rounded-lg mb-12 border border-gray-200">
         <h3 className="text-lg font-bold mb-4">Add New Portfolio</h3>
@@ -53,7 +117,6 @@ const Admin = () => {
             className="w-full px-4 py-2 border rounded" rows="3"
           ></textarea>
           
-          {/* URL 입력 필드 추가 (선택 사항) */}
           <input 
             type="url" placeholder="Project URL (Optional, e.g., https://kr-tech.com)" 
             value={projectUrl} onChange={e => setProjectUrl(e.target.value)}
