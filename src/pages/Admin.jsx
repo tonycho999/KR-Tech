@@ -1,63 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import usePortfolio from '../hooks/usePortfolio';
 import Button from '../components/common/Button';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const Admin = () => {
   const { projects, loading, createNewProject, removeProject } = usePortfolio();
   
-  // 1. 로그인 상태와 입력값 관리 State 추가
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // 포트폴리오 폼 State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectUrl, setProjectUrl] = useState('');
-  const [file, setFile] = useState(null);
+  const [imageUrl, setImageUrl] = useState(''); // 파일 대신 Image URL 상태 사용
 
-  // 2. 로그인 버튼 클릭 시 실행되는 함수
-  const handleLogin = (e) => {
+  // 로그인 상태 유지 확인 (새로고침해도 풀리지 않음)
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 진짜 Firebase 로그인
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // WARNING: 프론트엔드 하드코딩은 실제 서비스에서는 절대 권장하지 않습니다!
-    // 요청하신 계정(a@a.com / 202604) 또는 비밀번호(2580) 확인
-    const isMasterAccount = loginEmail === 'a@a.com' && loginPassword === '202604';
-    const isPinLogin = loginPassword === '2580';
-
-    if (isMasterAccount || isPinLogin) {
-      setIsAuthenticated(true);
-    } else {
-      alert("Invalid credentials. Please try again.");
-      setLoginPassword(''); // 틀렸을 때 비밀번호 칸만 비워주기
+    const auth = getAuth();
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      // 로그인 성공 시 onAuthStateChanged가 감지하여 isAuthenticated를 true로 바꿈
+    } catch (error) {
+      alert("Login failed: Check your email and password.");
+      setLoginPassword('');
     }
+  };
+
+  // 로그아웃
+  const handleLogout = async () => {
+    const auth = getAuth();
+    await signOut(auth);
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) {
-      alert("Please select an image file!");
-      return;
-    }
-
-    const success = await createNewProject({ title, description, projectUrl }, file);
+    
+    // imageUrl을 포함하여 전송 (파일 업로드 없음)
+    const success = await createNewProject({ title, description, projectUrl, imageUrl });
     
     if (success) {
       alert("Successfully uploaded!");
       setTitle('');
       setDescription('');
       setProjectUrl('');
-      setFile(null);
+      setImageUrl('');
+    } else {
+      alert("Upload failed. You might not have permission.");
     }
   };
 
-  const handleDelete = async (id, imageUrl) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this project?")) {
-      await removeProject(id, imageUrl);
+      await removeProject(id);
     }
   };
 
-  // 3. 로그인이 안 되어있다면 '로그인 폼' 화면만 보여줍니다.
   if (!isAuthenticated) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -65,24 +73,19 @@ const Admin = () => {
           <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional for PIN login)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input 
-                type="email" 
-                value={loginEmail} 
-                onChange={e => setLoginEmail(e.target.value)}
-                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="admin@example.com"
+                type="email" required
+                value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password / PIN</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input 
-                type="password" 
-                required
-                value={loginPassword} 
-                onChange={e => setLoginPassword(e.target.value)}
-                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your password"
+                type="password" required
+                value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md"
               />
             </div>
             <Button type="submit" variant="primary" className="w-full mt-6">
@@ -94,40 +97,40 @@ const Admin = () => {
     );
   }
 
-  // 4. 로그인이 성공하면 아래의 원래 관리자 화면을 보여줍니다.
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold text-red-600">Admin Only: Portfolio Management</h2>
-        {/* 로그아웃 버튼 (새로고침 효과) */}
-        <Button variant="outline" onClick={() => setIsAuthenticated(false)}>Logout</Button>
+        <Button variant="outline" onClick={handleLogout}>Logout</Button>
       </div>
       
       <div className="bg-gray-50 p-6 rounded-lg mb-12 border border-gray-200">
         <h3 className="text-lg font-bold mb-4">Add New Portfolio</h3>
         <form onSubmit={handleUpload} className="space-y-4">
           <input 
-            type="text" placeholder="Project Title" required 
+            type="text" placeholder="Project Title (Required)" required 
             value={title} onChange={e => setTitle(e.target.value)}
             className="w-full px-4 py-2 border rounded" 
           />
           <textarea 
-            placeholder="Project Description" required 
+            placeholder="Project Description (Required)" required 
             value={description} onChange={e => setDescription(e.target.value)}
             className="w-full px-4 py-2 border rounded" rows="3"
           ></textarea>
           
           <input 
-            type="url" placeholder="Project URL (Optional, e.g., https://kr-tech.com)" 
+            type="url" placeholder="Project Link URL (Optional, e.g., https://kr-tech.com)" 
             value={projectUrl} onChange={e => setProjectUrl(e.target.value)}
             className="w-full px-4 py-2 border rounded" 
           />
-          
+
+          {/* 파일 첨부 대신 이미지 링크를 넣는 곳으로 변경 */}
           <input 
-            type="file" accept="image/*" required 
-            onChange={e => setFile(e.target.files[0])}
-            className="w-full"
+            type="url" placeholder="Image URL (Required, e.g., https://imgur.com/.../img.jpg)" required
+            value={imageUrl} onChange={e => setImageUrl(e.target.value)}
+            className="w-full px-4 py-2 border rounded" 
           />
+          
           <Button type="submit" variant="primary" className={loading ? "opacity-50" : ""}>
             {loading ? "Uploading..." : "Upload"}
           </Button>
@@ -148,13 +151,10 @@ const Admin = () => {
                   )}
                   <div>
                     <span className="font-medium block">{project.title}</span>
-                    {project.projectUrl && (
-                      <span className="text-xs text-blue-500">{project.projectUrl}</span>
-                    )}
                   </div>
                 </div>
                 <Button 
-                  onClick={() => handleDelete(project.id, project.imageUrl)}
+                  onClick={() => handleDelete(project.id)}
                   variant="outline" 
                   className="text-sm px-3 py-1 text-red-600 border-red-600 hover:bg-red-50"
                   disabled={loading}
