@@ -26,7 +26,7 @@ const Header = () => {
               <img 
                 src="/images/logo.png" 
                 alt="KR-Tech Logo" 
-                className="h-20 w-auto" 
+                className="h-30 w-auto" 
               />
             </Link>
           </div>
