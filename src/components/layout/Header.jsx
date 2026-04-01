@@ -19,7 +19,7 @@ const Header = () => {
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 기존 h-16(고정 높이)을 지우고 py-4(상하 패딩)를 주어 로고 크기에 맞춰 자동 조절되게 합니다 */}
-        <div className="flex justify-between py-3 items-center">
+        <div className="flex justify-between py-1 items-center">
           
           {/* Logo Area */}
           <div className="flex-shrink-0 flex items-center">
