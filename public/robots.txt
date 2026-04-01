@@ -1,0 +1,7 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Point to the sitemap for search engines to find
+Sitemap: https://www.kr-tech.com/sitemap.xml
