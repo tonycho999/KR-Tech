@@ -9,8 +9,8 @@ const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   
-  // 폼 상태 관리 (카테고리 추가)
-  const [category, setCategory] = useState('(웹, 앱)'); // 기본값 설정
+  // 폼 상태 관리 (카테고리 기본값을 영어로 설정)
+  const [category, setCategory] = useState('Web & App'); 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectUrl, setProjectUrl] = useState('');
@@ -54,7 +54,7 @@ const Admin = () => {
       setTitle('');
       setDescription('');
       setProjectUrl('');
-      setCategory('(웹, 앱)'); // 초기화
+      setCategory('Web & App'); // 초기화 값도 영어로 변경
       setFile(null);
       document.getElementById('file-upload-input').value = ''; 
     } else {
@@ -106,18 +106,18 @@ const Admin = () => {
         <h3 className="text-lg font-bold mb-4">Add New Portfolio</h3>
         <form onSubmit={handleUpload} className="space-y-4">
           
-          {/* 카테고리 선택 드롭다운 추가 */}
+          {/* 카테고리 선택 드롭다운 (괄호 없는 영어로 통일) */}
           <div>
             <select 
               value={category} 
               onChange={e => setCategory(e.target.value)}
               className="w-full px-4 py-2 border rounded bg-white"
             >
-              <option value="(웹, 앱)">(웹, 앱)</option>
-              <option value="(솔루션)">(솔루션)</option>
-              <option value="(게임)">(게임)</option>
-              <option value="(디자인)">(디자인)</option>
-              <option value="기타">기타</option>
+              <option value="Web & App">Web & App</option>
+              <option value="Solution">Solution</option>
+              <option value="Game">Game</option>
+              <option value="Design">Design</option>
+              <option value="Others">Others</option>
             </select>
           </div>
 
@@ -171,7 +171,7 @@ const Admin = () => {
                       {project.title}
                       {/* 관리자 목록에서도 카테고리를 작게 보여줍니다 */}
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                        {project.category || '기타'}
+                        {project.category || 'Others'}
                       </span>
                     </span>
                     {project.projectUrl && (
