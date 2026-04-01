@@ -1,70 +1,65 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getProjects, addProject, deleteProject } from '../lib/portfolioService';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, addDoc, deleteDoc, doc, orderBy, query } from 'firebase/firestore';
+import { db } from '../lib/firebase'; // storage는 가져오지 않음
 
-export const usePortfolio = () => {
+const usePortfolio = () => {
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch projects from DB
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = async () => {
     setLoading(true);
     try {
-      const data = await getProjects();
+      const q = query(collection(db, 'portfolios'), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       setProjects(data);
-      setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to fetch portfolios');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // Initial fetch on mount
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+  }, []);
 
-  // Wrapper for adding a project (updates UI immediately)
-  const createNewProject = async (projectData, file) => {
+  // file 관련 변수 제거, projectData(텍스트 모음)만 받음
+  const createNewProject = async (projectData) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const newProject = await addProject(projectData, file);
-      // Update local state without re-fetching everything
-      setProjects(prev => [newProject, ...prev]); 
+      await addDoc(collection(db, 'portfolios'), {
+        ...projectData,
+        createdAt: new Date()
+      });
+      await fetchProjects(); // 등록 후 목록 새로고침
       return true;
     } catch (err) {
-      setError(err.message || 'Failed to upload portfolio');
+      setError(err.message);
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  // Wrapper for deleting a project (updates UI immediately)
-  const removeProject = async (id, imageUrl) => {
+  // Storage 이미지 삭제 로직 제거, DB 문서만 삭제
+  const removeProject = async (id) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      await deleteProject(id, imageUrl);
-      // Remove from local state
-      setProjects(prev => prev.filter(project => project.id !== id));
-      return true;
+      await deleteDoc(doc(db, 'portfolios', id));
+      await fetchProjects();
     } catch (err) {
-      setError(err.message || 'Failed to delete portfolio');
-      return false;
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return {
-    projects,
-    loading,
-    error,
-    refreshProjects: fetchProjects,
-    createNewProject,
-    removeProject
-  };
+  return { projects, loading, error, createNewProject, removeProject };
 };
 
 export default usePortfolio;
