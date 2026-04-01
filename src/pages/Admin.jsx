@@ -3,15 +3,13 @@ import usePortfolio from '../hooks/usePortfolio';
 import Button from '../components/common/Button';
 
 const Admin = () => {
-  // Fetch functions and project list from the hook
   const { projects, loading, createNewProject, removeProject } = usePortfolio();
   
-  // Form input states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [projectUrl, setProjectUrl] = useState(''); // URL 상태 추가
   const [file, setFile] = useState(null);
 
-  // Function triggered when the upload button is clicked
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -19,18 +17,18 @@ const Admin = () => {
       return;
     }
 
-    // Execute the creation function from the hook
-    const success = await createNewProject({ title, description }, file);
+    // projectUrl을 함께 넘겨줍니다
+    const success = await createNewProject({ title, description, projectUrl }, file);
     
     if (success) {
       alert("Successfully uploaded!");
-      setTitle(''); // Reset form fields
+      setTitle('');
       setDescription('');
+      setProjectUrl(''); // URL 초기화
       setFile(null);
     }
   };
 
-  // Function triggered when the delete button is clicked
   const handleDelete = async (id, imageUrl) => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       await removeProject(id, imageUrl);
@@ -41,7 +39,6 @@ const Admin = () => {
     <div className="max-w-4xl mx-auto px-4 py-16">
       <h2 className="text-2xl font-bold mb-8 text-red-600">Admin Only: Portfolio Management</h2>
       
-      {/* 1. Upload Form Section */}
       <div className="bg-gray-50 p-6 rounded-lg mb-12 border border-gray-200">
         <h3 className="text-lg font-bold mb-4">Add New Portfolio</h3>
         <form onSubmit={handleUpload} className="space-y-4">
@@ -55,6 +52,14 @@ const Admin = () => {
             value={description} onChange={e => setDescription(e.target.value)}
             className="w-full px-4 py-2 border rounded" rows="3"
           ></textarea>
+          
+          {/* URL 입력 필드 추가 (선택 사항) */}
+          <input 
+            type="url" placeholder="Project URL (Optional, e.g., https://kr-tech.com)" 
+            value={projectUrl} onChange={e => setProjectUrl(e.target.value)}
+            className="w-full px-4 py-2 border rounded" 
+          />
+          
           <input 
             type="file" accept="image/*" required 
             onChange={e => setFile(e.target.files[0])}
@@ -66,21 +71,24 @@ const Admin = () => {
         </form>
       </div>
 
-      {/* 2. Registered Portfolio List Section (For Deletion) */}
       <div>
         <h3 className="text-lg font-bold mb-4">Registered Projects</h3>
         {projects.length === 0 ? (
           <p className="text-gray-500">No portfolios registered.</p>
         ) : (
           <ul className="divide-y divide-gray-200 border-t border-b">
-            {/* Map over the projects array fetched from the DB to create the list */}
             {projects.map((project) => (
               <li key={project.id} className="py-4 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   {project.imageUrl && (
                     <img src={project.imageUrl} alt={project.title} className="w-16 h-12 object-cover rounded" />
                   )}
-                  <span className="font-medium">{project.title}</span>
+                  <div>
+                    <span className="font-medium block">{project.title}</span>
+                    {project.projectUrl && (
+                      <span className="text-xs text-blue-500">{project.projectUrl}</span>
+                    )}
+                  </div>
                 </div>
                 <Button 
                   onClick={() => handleDelete(project.id, project.imageUrl)}
