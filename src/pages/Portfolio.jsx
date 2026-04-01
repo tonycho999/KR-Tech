@@ -64,7 +64,6 @@ const Portfolio = () => {
           </div>
         )}
       </Modal>
-
     </div>
   );
 };
